@@ -54,3 +54,26 @@ if __name__ == "__main__":
     # Create a temp directory for file uploads
     os.makedirs("temp", exist_ok=True)
     app.run(debug=True)
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    try:
+        if 'file' not in request.files:
+            return jsonify({'message': 'No file part in the request'}), 400
+
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'message': 'No file selected for upload'}), 400
+
+        # Process the file (Placeholder logic)
+        if not file.filename.endswith('.mp3'):
+            return jsonify({'message': 'Invalid file type. Only MP3 files are supported.'}), 415
+
+        # Simulate successful processing
+        return jsonify({'message': 'File processed successfully'})
+
+    except Exception as e:
+        return jsonify({'message': f'An error occurred: {str(e)}'}), 500
