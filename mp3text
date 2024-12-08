@@ -1,0 +1,7 @@
+import whisper
+
+def mp3_to_text(mp3_file):
+    """Convert MP3 audio to text using OpenAI Whisper."""
+    model = whisper.load_model("base")  # Use "small", "medium", or "large" for better accuracy
+    result = model.transcribe(mp3_file)
+    return result['text']
