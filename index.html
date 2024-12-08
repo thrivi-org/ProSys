@@ -104,26 +104,68 @@
             }
         });
 
-        document.getElementById('textForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+      document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
 
-            const text = document.getElementById('textInput').value;
+    const formData = new FormData();
+    const fileInput = document.getElementById('fileInput');
 
-            const response = await fetch('/categorize', {
+    if (fileInput.files.length > 0) {
+        formData.append('file', fileInput.files[0]);
+
+        try {
+            const response = await fetch('/upload', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ text }),
+                body: formData,
             });
+
+            if (!response.ok) {  // Check for HTTP status code errors
+                const error = await response.json();
+                throw new Error(error.message || 'Unknown error occurred');
+            }
 
             const result = await response.json();
             displayResults(result);
+        } catch (error) {
+            displayError(error.message);
+        }
+    }
+});
+
+document.getElementById('textForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const text = document.getElementById('textInput').value;
+
+    try {
+        const response = await fetch('/categorize', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ text }),
         });
 
-        function displayResults(result) {
-            const resultsDiv = document.getElementById('results');
-            resultsDiv.innerHTML = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+        if (!response.ok) {  // Check for HTTP status code errors
+            const error = await response.json();
+            throw new Error(error.message || 'Unknown error occurred');
+        }
+
+        const result = await response.json();
+        displayResults(result);
+    } catch (error) {
+        displayError(error.message);
+    }
+});
+
+function displayResults(result) {
+    const resultsDiv = document.getElementById('results');
+    resultsDiv.innerHTML = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+}
+
+function displayError(message) {
+    const resultsDiv = document.getElementById('results');
+    resultsDiv.innerHTML = `<p style="color: red; font-weight: bold;">Error: ${message}</p></pre>`;
         }
     </script>
 </body>
