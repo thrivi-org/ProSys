@@ -61,20 +61,20 @@
 <body>
     <div class="container">
         <h1>File Upload and Categorization</h1>
-        <form id="uploadForm" enctype="multipart/form-data">
+        <form id="uploadForm" enctype="multipart/form-data" aria-labelledby="uploadFormLabel">
             <div class="form-group">
-                <label for="fileInput">Upload a file:</label>
-                <input type="file" id="fileInput" name="file">
+                <label for="fileInput" id="uploadFormLabel">Upload a file:</label>
+                <input type="file" id="fileInput" name="file" required>
             </div>
             <div class="form-group">
                 <button type="submit">Upload</button>
             </div>
         </form>
 
-        <form id="textForm">
+        <form id="textForm" aria-labelledby="textFormLabel">
             <div class="form-group">
-                <label for="textInput">Paste your text here:</label>
-                <textarea id="textInput" name="text" rows="6"></textarea>
+                <label for="textInput" id="textFormLabel">Paste your text here:</label>
+                <textarea id="textInput" name="text" rows="6" required></textarea>
             </div>
             <div class="form-group">
                 <button type="submit">Categorize Text</button>
@@ -94,78 +94,59 @@
             if (fileInput.files.length > 0) {
                 formData.append('file', fileInput.files[0]);
 
-                const response = await fetch('/upload', {
+                try {
+                    const response = await fetch('/upload', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    if (!response.ok) {  // Check for HTTP status code errors
+                        const error = await response.json();
+                        throw new Error(error.message || 'Unknown error occurred');
+                    }
+
+                    const result = await response.json();
+                    displayResults(result);
+                } catch (error) {
+                    displayError(error.message);
+                }
+            }
+        });
+
+        document.getElementById('textForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const text = document.getElementById('textInput').value;
+
+            try {
+                const response = await fetch('/categorize', {
                     method: 'POST',
-                    body: formData,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text }),
                 });
+
+                if (!response.ok) {  // Check for HTTP status code errors
+                    const error = await response.json();
+                    throw new Error(error.message || 'Unknown error occurred');
+                }
 
                 const result = await response.json();
                 displayResults(result);
+            } catch (error) {
+                displayError(error.message);
             }
         });
 
-      document.getElementById('uploadForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const formData = new FormData();
-    const fileInput = document.getElementById('fileInput');
-
-    if (fileInput.files.length > 0) {
-        formData.append('file', fileInput.files[0]);
-
-        try {
-            const response = await fetch('/upload', {
-                method: 'POST',
-                body: formData,
-            });
-
-            if (!response.ok) {  // Check for HTTP status code errors
-                const error = await response.json();
-                throw new Error(error.message || 'Unknown error occurred');
-            }
-
-            const result = await response.json();
-            displayResults(result);
-        } catch (error) {
-            displayError(error.message);
-        }
-    }
-});
-
-document.getElementById('textForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const text = document.getElementById('textInput').value;
-
-    try {
-        const response = await fetch('/categorize', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ text }),
-        });
-
-        if (!response.ok) {  // Check for HTTP status code errors
-            const error = await response.json();
-            throw new Error(error.message || 'Unknown error occurred');
+        function displayResults(result) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
         }
 
-        const result = await response.json();
-        displayResults(result);
-    } catch (error) {
-        displayError(error.message);
-    }
-});
-
-function displayResults(result) {
-    const resultsDiv = document.getElementById('results');
-    resultsDiv.innerHTML = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
-}
-
-function displayError(message) {
-    const resultsDiv = document.getElementById('results');
-    resultsDiv.innerHTML = `<p style="color: red; font-weight: bold;">Error: ${message}</p></pre>`;
+        function displayError(message) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `<p style="color: red; font-weight: bold;">Error: ${message}</p>`;
         }
     </script>
 </body>

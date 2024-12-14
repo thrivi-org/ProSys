@@ -1,84 +1,60 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>File Upload and Transcript Processing</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .highlight {
-            background-color: yellow;
-        }
-    </style>
-</head>
-<body>
-<div class="container mt-5">
-    <h1 class="text-center">Upload File for Transcription</h1>
-    <form id="uploadForm" class="mt-4">
-        <div class="mb-3">
-            <label for="fileInput" class="form-label">Select your file:</label>
-            <input type="file" id="fileInput" class="form-control" accept=".wav, .mp3, .m4a" required>
-        </div>
-        <button type="submit" class="btn btn-primary">Upload and Process</button>
-    </form>
-    <div id="outputSection" class="mt-4" style="display: none;">
-        <h3>Processed Transcript:</h3>
-        <pre id="transcriptOutput" class="p-3 border rounded"></pre>
-        <a id="downloadLink" href="#" class="btn btn-success mt-3">Download Transcript</a>
-    </div>
-</div>
+from flask import Flask, request, jsonify, send_from_directory
+import os
+from werkzeug.utils import secure_filename
 
-<script>
-    document.getElementById('uploadForm').addEventListener('submit', async function (event) {
-        event.preventDefault();
+def mp3_to_text(file_path):
+    # Dummy implementation for the purpose of this example
+    return "Extracted text from mp3"
 
-        const fileInput = document.getElementById('fileInput');
-        const file = fileInput.files[0];
-        if (!file) {
-            alert('Please select a file before submitting.');
-            return;
-        }
+def extract_information(text):
+    # Dummy implementation for the purpose of this example
+    return {"info": "Extracted information"}
 
-        const formData = new FormData();
-        formData.append('file', file);
+def create_pdf(data, output_file):
+    # Dummy implementation for the purpose of this example
+    with open(output_file, 'w') as f:
+        f.write("PDF content with extracted data")
 
-        try {
-            // Mock API call to upload and process the file
-            const response = await fetch('https://your-api-endpoint/transcribe', {
-                method: 'POST',
-                body: formData
-            });
+app = Flask(__name__)
+UPLOAD_FOLDER = 'uploads'
+RESULT_FOLDER = 'results'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(RESULT_FOLDER, exist_ok=True)
 
-            if (!response.ok) {
-                throw new Error('Failed to process file.');
-            }
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['RESULT_FOLDER'] = RESULT_FOLDER
 
-            const data = await response.json();
-            let transcript = data.transcript || '';
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
 
-            // Highlight numbers in the transcript
-            transcript = transcript.replace(/\b\d+\b/g, '<span class="highlight">$&</span>');
+        # Process file
+        output_file = os.path.join(app.config['RESULT_FOLDER'], filename.replace('.mp3', '.pdf'))
+        text = mp3_to_text(filepath)
+        extracted_data = extract_information(text)
+        create_pdf(extracted_data, output_file)
 
-            // Display processed transcript
-            const transcriptOutput = document.getElementById('transcriptOutput');
-            transcriptOutput.innerHTML = transcript;
+        return jsonify({'message': 'File processed successfully',
+                        'download_url': f'/download/{filename.replace(".mp3", ".pdf")}'})
+    return jsonify({'error': 'Unexpected error'}), 500
 
-            // Prepare the downloadable file
-            const plainTextTranscript = transcript.replace(/<[^>]+>/g, '');
-            const blob = new Blob([plainTextTranscript], { type: 'text/plain' });
-            const downloadLink = document.getElementById('downloadLink');
-            downloadLink.href = URL.createObjectURL(blob);
-            downloadLink.download = 'transcript.txt';
+@app.route('/download/<filename>', methods=['GET'])
+def download_file(filename):
+    return send_from_directory(app.config['RESULT_FOLDER'], filename, as_attachment=True)
 
-            // Show the output section
-            document.getElementById('outputSection').style.display = 'block';
-        } catch (error) {
-            console.error(error);
-            alert('An error occurred while processing your file.');
-        }
-    });
-</script>
+def allowed_file(filename):
+    ALLOWED_EXTENSIONS = {'mp3'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+if __name__ == '__main__':
+    app.run(debug=True)
